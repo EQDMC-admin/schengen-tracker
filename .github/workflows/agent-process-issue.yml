@@ -1,0 +1,13 @@
+name: "Agent: Process Issue"
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  implement:
+    if: github.event.label.name == 'agent-work'
+    uses: eqdmc/.github/.github/workflows/agent-process-issue.yml@main
+    with:
+      issue-number: ${{ github.event.issue.number }}
+    secrets: inherit

@@ -1,0 +1,12 @@
+name: "Agent: Issue Triage"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    uses: eqdmc/.github/.github/workflows/agent-issue-triage.yml@main
+    with:
+      issue-number: ${{ github.event.issue.number }}
+    secrets: inherit
