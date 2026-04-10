@@ -1,0 +1,11 @@
+name: "Agent: Weekly Maintenance"
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+
+jobs:
+  maintenance:
+    uses: eqdmc/.github/.github/workflows/agent-maintenance.yml@main
+    secrets: inherit
