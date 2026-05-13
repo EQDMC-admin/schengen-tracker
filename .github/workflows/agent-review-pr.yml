@@ -2,7 +2,7 @@ name: "Agent: Review PR"
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
 
 concurrency:
   group: agent-review-${{ github.event.pull_request.number }}
@@ -68,7 +68,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          model: anthropic/claude-sonnet-4-6
+          model: anthropic/claude-haiku-4-5-20251001
+          use_github_token: "true"
           prompt: |
             You are an independent reviewer for PR #${{ needs.gate.outputs.pr }} on ${{ github.repository }}.
 
