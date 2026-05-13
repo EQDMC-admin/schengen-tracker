@@ -61,7 +61,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -76,6 +75,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: anthropic/claude-haiku-4-5-20251001
+          use_github_token: "true"
           prompt: |
             You are processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
 
