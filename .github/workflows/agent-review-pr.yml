@@ -66,8 +66,8 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ORG_CONFIG_TOKEN }}
+          GH_TOKEN: ${{ secrets.ORG_CONFIG_TOKEN }}
         with:
           model: anthropic/claude-haiku-4-5-20251001
           use_github_token: "true"
