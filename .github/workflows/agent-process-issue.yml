@@ -76,7 +76,7 @@ jobs:
           GH_TOKEN: ${{ secrets.ORG_CONFIG_TOKEN }}
         with:
           model: anthropic/claude-haiku-4-5-20251001
-          use_github_token: "false"
+          use_github_token: "true"
           prompt: |
             You are an autonomous agent processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
 
