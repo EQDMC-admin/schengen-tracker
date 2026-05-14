@@ -78,48 +78,68 @@ jobs:
           model: anthropic/claude-haiku-4-5-20251001
           use_github_token: "true"
           prompt: |
-            You are processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
+            You are an autonomous agent processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
 
-            First, read the issue:
+            Step 1 — Read the issue:
               gh issue view ${{ needs.validate.outputs.issue }} -R ${{ github.repository }} --json title,body,comments
 
-            Then follow the issue's instructions exactly.
+            Step 2 — Implement the task following the issue's instructions exactly.
 
-            Your contract:
-              1. Follow the "## Task" and "## Acceptance criteria" sections exactly.
-              2. Do not expand scope.
-              3. Run every verification check before opening a PR.
-              4. Create a branch, commit changes, push, and open a PR with:
-                 - Title: conventional format (type: subject)
-                 - Body containing "Closes #${{ needs.validate.outputs.issue }}"
-              5. Do NOT self-merge.
+            Step 3 — Verify your work passes all checks listed in the issue.
 
-            If you need human input, comment on the issue with a
-            "## Needs Human Input" section, add the needs-human label, and stop.
+            Step 4 — YOU MUST create the PR yourself. This is non-negotiable.
+              Run this command:
+                gh pr create \
+                  --title "<type>: <description>" \
+                  --body "Closes #${{ needs.validate.outputs.issue }}" \
+                  --head "<your-branch-name>"
 
-      - name: Apply org PR conventions
+            Rules:
+              - Follow "## Task" and "## Acceptance criteria" sections exactly.
+              - Do not expand scope beyond what the issue asks.
+              - PR title must use conventional format (feat/fix/chore/docs/test/refactor: description).
+              - PR body MUST contain "Closes #${{ needs.validate.outputs.issue }}".
+              - Do NOT self-merge. Do NOT assume infrastructure creates the PR for you.
+              - If you need human input, comment on the issue with a
+                "## Needs Human Input" section, add the needs-human label, and stop.
+
+      - name: Verify PR was created
+        id: verify-pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE: ${{ needs.validate.outputs.issue }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          pr=$(gh pr list --repo "$REPO" --state open --json number,createdAt \
-            --jq "sort_by(.createdAt) | last | .number" 2>/dev/null)
+          pr=$(gh pr list --repo "$REPO" --state open --json number,body \
+            --jq "[.[] | select(.body | test(\"(?i)(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE\"))] | first | .number" 2>/dev/null)
           if [ -z "$pr" ] || [ "$pr" = "null" ]; then
-            echo "No open PR found — agent may have commented instead of creating PR"
-            exit 0
+            echo "::error::Agent did not create a PR for issue #$ISSUE"
+            gh issue comment "$ISSUE" --repo "$REPO" \
+              --body "Agent completed but did not create a PR. Marking for retry." || true
+            exit 1
           fi
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "Agent created PR #$pr for issue #$ISSUE"
 
-          gh pr edit "$pr" --repo "$REPO" \
+      - name: Apply org PR conventions
+        if: steps.verify-pr.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ needs.validate.outputs.issue }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.verify-pr.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR" --repo "$REPO" \
             --add-label "agent-work" --add-label "risk:low" --add-label "ready-to-merge" || true
 
           title=$(gh issue view "$ISSUE" --repo "$REPO" --json title --jq '.title')
-          current=$(gh pr view "$pr" --repo "$REPO" --json title --jq '.title')
+          current=$(gh pr view "$PR" --repo "$REPO" --json title --jq '.title')
           if ! echo "$current" | grep -qE '^(feat|fix|chore|docs|test|refactor|ci|style|perf|build|revert):'; then
             if echo "$title" | grep -qE '^(feat|fix|chore|docs|test|refactor|ci|style|perf|build|revert):'; then
-              gh pr edit "$pr" --repo "$REPO" --title "$title" || true
+              gh pr edit "$PR" --repo "$REPO" --title "$title" || true
             else
-              gh pr edit "$pr" --repo "$REPO" --title "feat: $title" || true
+              gh pr edit "$PR" --repo "$REPO" --title "feat: $title" || true
             fi
           fi
