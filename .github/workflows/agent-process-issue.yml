@@ -92,6 +92,7 @@ jobs:
                 gh pr create \
                   --title "<type>: <description>" \
                   --body "Closes #${{ needs.validate.outputs.issue }}" \
+                  --label "agent-work,risk:low,ready-to-merge" \
                   --head "<your-branch-name>"
 
             Rules:
