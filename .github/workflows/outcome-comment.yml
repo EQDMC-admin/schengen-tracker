@@ -67,4 +67,10 @@ jobs:
           )
             gh issue comment "$n" --repo "$REPO" --body "$body" || \
               echo "Failed to post on issue #${n}" >> "$GITHUB_STEP_SUMMARY"
+
+            state=$(gh issue view "$n" --repo "$REPO" --json state --jq '.state' 2>/dev/null || true)
+            if [ "$state" = "OPEN" ]; then
+              gh issue close "$n" --repo "$REPO" --reason completed || \
+                echo "Failed to close issue #${n}" >> "$GITHUB_STEP_SUMMARY"
+            fi
           done
