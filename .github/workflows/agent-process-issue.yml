@@ -68,6 +68,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Derive branch name from issue
+        id: branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ needs.validate.outputs.issue }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          title=$(gh issue view "$ISSUE" --repo "$REPO" --json title --jq '.title')
+          slug=$(echo "$title" \
+            | sed -E 's/^(feat|fix|chore|docs|test|refactor|ci|style|perf|build|revert): *//' \
+            | tr '[:upper:]' '[:lower:]' \
+            | tr -cs 'a-z0-9' '-' \
+            | sed 's/^-//;s/-$//' \
+            | cut -c1-50)
+          branch="agent/${ISSUE}-${slug}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "title=$title" >> "$GITHUB_OUTPUT"
+
+          if echo "$title" | grep -qE '^(feat|fix|chore|docs|test|refactor|ci|style|perf|build|revert):'; then
+            echo "pr_title=$title" >> "$GITHUB_OUTPUT"
+          else
+            echo "pr_title=feat: $title" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Process issue with OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -80,29 +105,40 @@ jobs:
           prompt: |
             You are an autonomous agent processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
 
-            Step 1 — Read the issue:
+            BRANCH NAME (use exactly): ${{ steps.branch.outputs.branch }}
+            PR TITLE (use exactly): ${{ steps.branch.outputs.pr_title }}
+
+            Step 1 — Read the issue (body AND all comments):
               gh issue view ${{ needs.validate.outputs.issue }} -R ${{ github.repository }} --json title,body,comments
 
-            Step 2 — Implement the task following the issue's instructions exactly.
+            If a "## Human Response" comment exists, continue from where
+            the previous agent left off using that response.
 
-            Step 3 — Verify your work passes all checks listed in the issue.
+            Step 2 — Create your branch:
+              git checkout -b ${{ steps.branch.outputs.branch }}
 
-            Step 4 — YOU MUST create the PR yourself. This is non-negotiable.
-              Run this command:
-                gh pr create \
-                  --title "<type>: <description>" \
-                  --body "Closes #${{ needs.validate.outputs.issue }}" \
-                  --label "agent-work,risk:low,ready-to-merge" \
-                  --head "<your-branch-name>"
+            Step 3 — Implement the task. Follow "## Task" and "## Acceptance
+            criteria" sections exactly. Do NOT expand scope.
 
-            Rules:
-              - Follow "## Task" and "## Acceptance criteria" sections exactly.
-              - Do not expand scope beyond what the issue asks.
-              - PR title must use conventional format (feat/fix/chore/docs/test/refactor: description).
-              - PR body MUST contain "Closes #${{ needs.validate.outputs.issue }}".
-              - Do NOT self-merge. Do NOT assume infrastructure creates the PR for you.
-              - If you need human input, comment on the issue with a
-                "## Needs Human Input" section, add the needs-human label, and stop.
+            Step 4 — Commit and push:
+              git add -A
+              git commit -m "${{ steps.branch.outputs.pr_title }} (#${{ needs.validate.outputs.issue }})"
+              git push -u origin ${{ steps.branch.outputs.branch }}
+
+            Step 5 — Create the PR. This is non-negotiable. Run exactly:
+              gh pr create \
+                --title "${{ steps.branch.outputs.pr_title }}" \
+                --body "Closes #${{ needs.validate.outputs.issue }}" \
+                --label "agent-work,risk:low,ready-to-merge" \
+                --head "${{ steps.branch.outputs.branch }}"
+
+            Constraints:
+              - Do NOT change the branch name, PR title, or labels above.
+              - Do NOT self-merge.
+              - Do NOT assume infrastructure creates the PR for you.
+              - Do NOT modify .github/workflows/ or settings.json.
+              - If stuck, comment "## Needs Human Input" on the issue,
+                add the needs-human label, and stop.
 
       - name: Verify PR was created
         id: verify-pr
