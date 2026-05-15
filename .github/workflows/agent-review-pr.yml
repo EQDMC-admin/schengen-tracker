@@ -85,6 +85,11 @@ jobs:
               5. Apply the 4-pass review: security, correctness, architecture, quality.
               6. Compose a SINGLE review comment in Conventional Comments format.
 
+            Scope: review CODE CHANGES only. Do NOT flag branch naming,
+            PR title format, label presence, or other metadata — those are
+            enforced by pr-metadata-check (a separate CI workflow). If the
+            only issues are metadata, verdict is Pass.
+
             Output contract:
               - POST a PR comment via `gh pr comment ${{ needs.gate.outputs.pr }} -R ${{ github.repository }} --body "..."`.
               - If you find ANY blocking issues, also:
