@@ -1,0 +1,18 @@
+# Managed by eqdmc/.github — default CI stub.
+# Replace this file with repo-specific CI. The org ruleset requires a
+# "ci / ci" status check — this stub satisfies it for repos without tests.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Governance check
+        run: echo "No repo-specific CI. Governance enforced via pr-check.yml."
