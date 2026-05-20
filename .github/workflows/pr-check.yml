@@ -1,0 +1,30 @@
+# Managed by eqdmc/.github — do not edit. Changes overwritten on next sync.
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  pr-metadata:
+    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@main
+    secrets: inherit
+
+  auto-merge:
+    needs: [pr-metadata]
+    uses: eqdmc/.github/.github/workflows/auto-merge.yml@main
+    secrets: inherit
+
+  dependabot-automerge:
+    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@main
+    secrets: inherit
+
+  deps-vetting:
+    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@main
+    secrets: inherit
