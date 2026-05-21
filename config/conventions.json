@@ -31,6 +31,10 @@
     "idea": {
       "label": "idea",
       "required_sections": []
+    },
+    "agent-escalation": {
+      "label": "needs-human",
+      "required_sections": ["Blocking issue", "Reason", "What was attempted", "Files involved"]
     }
   }
 }
