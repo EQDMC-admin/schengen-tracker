@@ -12,6 +12,10 @@ permissions:
   issues: read
 
 jobs:
+  path-guard:
+    uses: eqdmc/.github/.github/workflows/path-guard.yml@main
+    secrets: inherit
+
   pr-metadata:
     uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@main
     secrets: inherit
