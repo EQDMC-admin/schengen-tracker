@@ -33,21 +33,22 @@ jobs:
         run: |
           now_epoch=$(date +%s)
 
+          gh pr list --repo "$REPO" --state open --author "app/dependabot" \
+            --json number,createdAt,autoMergeRequest \
+            --jq '.[] | select(.autoMergeRequest == null) | "\(.number) \(.createdAt)"' | \
           while read -r pr_num created_at; do
             [ -z "$pr_num" ] && continue
-            created_epoch=$(date -d "$created_at" +%s 2>/dev/null) || continue
+            created_epoch=$(date -d "$created_at" +%s 2>/dev/null || date -jf "%Y-%m-%dT%H:%M:%SZ" "$created_at" +%s)
             age_days=$(( (now_epoch - created_epoch) / 86400 ))
 
             if [ "$age_days" -ge "$COOLDOWN_DAYS" ]; then
               echo "PR #${pr_num}: ${age_days}d old (>= ${COOLDOWN_DAYS}d cooldown) — enabling auto-merge"
-              gh pr merge "$pr_num" --repo "$REPO" --auto --squash 2>&1 || echo "  Failed on PR #${pr_num}"
+              gh pr merge "$pr_num" --repo "$REPO" --auto --squash 2>&1 || echo "  Failed to enable auto-merge on PR #${pr_num}"
             else
               remaining=$((COOLDOWN_DAYS - age_days))
-              echo "PR #${pr_num}: ${age_days}d old — ${remaining}d remaining"
+              echo "PR #${pr_num}: ${age_days}d old — ${remaining}d remaining in cooldown"
             fi
-          done < <(gh pr list --repo "$REPO" --state open --author "app/dependabot" \
-            --json number,createdAt,autoMergeRequest \
-            --jq '.[] | select(.autoMergeRequest == null) | "\(.number) \(.createdAt)"')
+          done
 
           {
             echo "### Dependabot Cooldown Check"
